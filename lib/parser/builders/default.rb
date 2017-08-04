@@ -604,20 +604,6 @@ module Parser
         collection_map(begin_t, args, end_t))
     end
 
-    def prototype(genargs, args, return_type)
-      locs = [genargs, args, return_type].map { |n| n&.loc&.expression }.compact
-
-      loc = locs.reduce { |a, b| a.join(b) }
-
-      n(:prototype, [genargs, args, return_type],
-        expr_map(loc))
-    end
-
-    def typed_arg(type, arg)
-      n(:typed_arg, [type, arg],
-        expr_map(join_exprs(type, arg)))
-    end
-
     def arg(name_t)
       n(:arg, [ value(name_t).to_sym ],
         variable_map(name_t))
@@ -665,24 +651,14 @@ module Parser
         variable_map(name_t))
     end
 
-    def blockarg(amper_t, name_t=nil)
-      if name_t
-        n(:blockarg, [ value(name_t).to_sym ],
-          arg_prefix_map(amper_t, name_t))
-      else
-        n0(:blockarg,
-          arg_prefix_map(amper_t))
-      end
+    def blockarg(amper_t, name_t)
+      n(:blockarg, [ value(name_t).to_sym ],
+        arg_prefix_map(amper_t, name_t))
     end
 
     def procarg0(arg)
       if self.class.emit_procarg0
-        if arg.type == :typed_arg
-          type, actual_arg = *arg
-          typed_arg(type, actual_arg.updated(:procarg0))
-        else
-          arg.updated(:procarg0)
-        end
+        arg.updated(:procarg0)
       else
         arg
       end
@@ -1110,82 +1086,6 @@ module Parser
       end
     end
 
-    def tr_cpath(cpath)
-      n(:tr_cpath, [cpath],
-        expr_map(cpath.loc.expression))
-    end
-
-    def tr_array(begin_t, type, end_t)
-      n(:tr_array, [type],
-        expr_map(loc(begin_t).join(type.loc.expression).join(loc(end_t))))
-    end
-
-    def tr_tuple(begin_t, types, end_t)
-      n(:tr_tuple, types,
-        expr_map(loc(begin_t).join(loc(end_t))))
-    end
-
-    def tr_hash(begin_t, key_type, assoc_t, value_type, end_t)
-      n(:tr_hash, [key_type, value_type],
-        binary_op_map(key_type, assoc_t, value_type))
-    end
-
-    def tr_nillable(eh_t, type)
-      n(:tr_nillable, [type],
-        expr_map(loc(eh_t).join(type.loc.expression)))
-    end
-
-    def tr_nil(nil_t)
-      n0(:tr_nil,
-        token_map(nil_t))
-    end
-
-    def tr_gendecl(cpath, begin_t, genargs, end_t)
-      n(:tr_gendecl, [cpath, *genargs],
-        expr_map(
-          cpath.loc.expression.join(loc(end_t))))
-    end
-
-    def tr_genargs(begin_t, genargs, end_t)
-      n(:tr_genargs, genargs,
-        expr_map(loc(begin_t).join(loc(end_t))))
-    end
-
-    def tr_gendeclarg(tok)
-      value(tok).to_sym
-    end
-
-    def tr_geninst(cpath, begin_t, genargs, end_t)
-      n(:tr_geninst, [cpath, *genargs],
-        expr_map(
-          cpath.loc.expression.join(loc(end_t))))
-    end
-
-    def tr_proc(begin_t, args, end_t)
-      n(:tr_proc, [args],
-        expr_map(loc(begin_t).join(args.loc.expression).join(loc(end_t))))
-    end
-
-    def tr_special(spec_t)
-      n(:tr_special, [value(spec_t).to_sym],
-        token_map(spec_t))
-    end
-
-    def tr_cast(begin_t, expr, colon_t, type, end_t)
-      n(:tr_cast, [expr, type],
-        expr_map(loc(begin_t).join(loc(end_t))))
-    end
-
-    def tr_ivardecl(def_t, ivar, type)
-      n(:tr_ivardecl, [value(ivar).to_sym, type],
-        expr_map(loc(def_t).join(type.loc.expression)))
-    end
-
-    def tr_or(a, b)
-      n(:tr_or, [a, b],
-        expr_map(a.loc.expression.join(b.loc.expression)))
-    end
-
     private
 
     #
@@ -1237,11 +1137,6 @@ module Parser
     end
 
     def check_duplicate_args(args, map={})
-      if args.nil?
-        require "pry"
-        pry binding
-      end
-
       args.each do |this_arg|
         case this_arg.type
         when :arg, :optarg, :restarg, :blockarg,

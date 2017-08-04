@@ -194,7 +194,7 @@ rule
                     }
                 | kDEF tIVAR tCOLON tr_type
                     {
-                      result = @builder.tr_ivardecl(val[0], val[1], val[3])
+                      result = nil
                     }
                 | expr
 
@@ -545,7 +545,7 @@ rule
                     }
                 | primary_value tCOLON2 tLBRACK2 tr_gendeclargs rbracket
                     {
-                      result = @builder.tr_gendecl(val[0], val[2], val[3], val[4])
+                      result = val[0]
                     }
                 | primary_value tCOLON2 cname
                     {
@@ -967,7 +967,7 @@ rule
                     }
                 | tLPAREN expr tCOLON tr_type tRPAREN
                     {
-                      result = @builder.tr_cast(val[0], val[1], val[2], val[3], val[4])
+                      result = val[1]
                     }
                 | primary_value tCOLON2 tCONSTANT
                     {
@@ -1429,10 +1429,6 @@ opt_block_args_tail:
                   tr_returnsig
                     {
                       result = val[0]
-
-                      if val[2]
-                        result = @builder.prototype(nil, result, val[2])
-                      end
                     }
 
  block_param_def: tPIPE opt_bv_decl tPIPE
@@ -1991,13 +1987,7 @@ keyword_variable: kNIL
                     }
 
 tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
-                    {
-                      result = @builder.tr_genargs(val[0], val[1], val[2])
-                    }
                 | # nothing
-                    {
-                      result = nil
-                    }
 
        f_arglist: tr_methodgenargs tLPAREN2 f_args rparen
                     {
@@ -2006,10 +1996,6 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                   tr_returnsig
                     {
                       result = @builder.args(val[1], val[2], val[3])
-
-                      if val[0] || val[5]
-                        result = @builder.prototype(val[0], result, val[5])
-                      end
                     }
                 | tr_methodgenargs
                     {
@@ -2020,10 +2006,6 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                     {
                       @lexer.in_kwarg = val[1]
                       result = @builder.args(nil, val[2], nil)
-
-                      if val[0] || val[3]
-                        result = @builder.prototype(val[0], result, val[3])
-                      end
                     }
 
        args_tail: f_kwarg tCOMMA f_kwrest opt_f_block_arg
@@ -2171,10 +2153,6 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
       f_arg_item: tr_argsig f_arg_asgn
                     {
                       result = @builder.arg(val[1])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
                 | tLPAREN f_margs rparen
                     {
@@ -2202,35 +2180,19 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
             f_kw: tr_argsig f_label arg_value
                     {
                       result = @builder.kwoptarg(val[1], val[2])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
                 | tr_argsig f_label
                     {
                       result = @builder.kwarg(val[1])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
 
       f_block_kw: tr_argsig f_label primary_value
                     {
                       result = @builder.kwoptarg(val[1], val[2])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
                 | tr_argsig f_label
                     {
                       result = @builder.kwarg(val[1])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
 
    f_block_kwarg: f_block_kw
@@ -2267,19 +2229,11 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
            f_opt: tr_argsig f_arg_asgn tEQL arg_value
                     {
                       result = @builder.optarg(val[1], val[2], val[3])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
 
      f_block_opt: tr_argsig f_arg_asgn tEQL primary_value
                     {
                       result = @builder.optarg(val[1], val[2], val[3])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
 
   f_block_optarg: f_block_opt
@@ -2306,23 +2260,11 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                     {
                       @static_env.declare val[2][0]
 
-                      restarg = @builder.restarg(val[1], val[2])
-
-                      if val[0]
-                        restarg = @builder.typed_arg(val[0], restarg)
-                      end
-
-                      result = [ restarg ]
+                      result = [ @builder.restarg(val[1], val[2]) ]
                     }
                 | tr_argsig restarg_mark
                     {
-                      restarg = @builder.restarg(val[1], val[2])
-
-                      if val[0]
-                        restarg = @builder.typed_arg(val[0], restarg)
-                      end
-
-                      result = [ restarg ]
+                      result = [ @builder.restarg(val[1]) ]
                     }
 
      blkarg_mark: tAMPER2 | tAMPER
@@ -2332,18 +2274,10 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                       @static_env.declare val[2][0]
 
                       result = @builder.blockarg(val[1], val[2])
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
                 | tr_argsig blkarg_mark
                     {
                       result = @builder.blockarg(val[1], nil)
-
-                      if val[0]
-                        result = @builder.typed_arg(val[0], result)
-                      end
                     }
 
  opt_f_block_arg: tCOMMA f_block_arg
@@ -2454,101 +2388,31 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                    }
 
          tr_type: tr_cpath
-                    {
-                      result = @builder.tr_cpath(val[0])
-                    }
                 | tr_cpath tCOLON2 tLBRACK2 tr_types rbracket
-                    {
-                      result = @builder.tr_geninst(val[0], val[2], val[3], val[4])
-                    }
                 | tLBRACK tr_type rbracket
-                    {
-                      result = @builder.tr_array(val[0], val[1], val[2])
-                    }
                 | tLBRACK tr_type tCOMMA tr_types rbracket
-                    {
-                      types = val[3]
-                      types.unshift(val[1])
-                      result = @builder.tr_tuple(val[0], types, val[4])
-                    }
                 | tLBRACE tr_type tASSOC tr_type tRCURLY
-                    {
-                      result = @builder.tr_hash(val[0], val[1], val[2], val[3], val[4])
-                    }
                 | tLBRACE tr_blockproto tr_returnsig tRCURLY
-                    {
-                      prototype =
-                        if val[2]
-                          @builder.prototype(nil, val[1], val[2])
-                        else
-                          val[1]
-                        end
-
-                      result = @builder.tr_proc(val[0], prototype, val[3])
-                    }
                 | tTILDE tr_type
-                    {
-                      result = @builder.tr_nillable(val[0], val[1])
-                    }
                 | kNIL
-                    {
-                      result = @builder.tr_nil(val[0])
-                    }
                 | tSYMBOL
-                    {
-                      result =
-                        case val[0][0]
-                        when "self", "instance", "class", "any"
-                          @builder.tr_special(val[0])
-                        else
-                          diagnostic :error, :bad_special_type, { value: val[0][0] }, val[0]
-                        end
-                    }
                 | tLPAREN tr_union_type rparen
-                    {
-                      result = val[1]
-                    }
 
    tr_union_type: tr_union_type tPIPE tr_type
-                    {
-                      result = @builder.tr_or(val[0], val[2])
-                    }
                 | tr_type
 
        tr_argsig: tr_type
-                    {
-                      result = val[0]
-                      @lexer.state = :expr_beg
-                    }
-                |
-                    {
-                      result = nil
-                    }
+                | # nothing
 
     tr_returnsig: tASSOC tr_type
-                    {
-                      result = val[1]
-                    }
-                |
-                    {
-                      result = nil
-                    }
+                | # nothing
 
   tr_gendeclargs: tr_gendeclargs tCOMMA tCONSTANT
-                    {
-                      result = val[0] << @builder.tr_gendeclarg(val[2])
-                    }
                 | tCONSTANT
-                    {
-                      result = [@builder.tr_gendeclarg(val[0])]
-                    }
 
    tr_blockproto: { @static_env.extend_dynamic }
                   block_param_def
-                    {
-                      @static_env.unextend
-                      result = val[1]
-                    }
+                  { @static_env.unextend }
 end
 
 ---- header
