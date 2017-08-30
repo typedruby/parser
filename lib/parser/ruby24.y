@@ -194,7 +194,7 @@ rule
                     }
                 | kDEF tIVAR tCOLON tr_type
                     {
-                      result = nil
+                      result = @builder.begin(val[0], nil, val[0])
                     }
                 | expr
 
