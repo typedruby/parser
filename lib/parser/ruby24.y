@@ -2215,15 +2215,15 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
 
      kwrest_mark: tPOW | tDSTAR
 
-        f_kwrest: kwrest_mark tIDENTIFIER
+        f_kwrest: tr_argsig kwrest_mark tIDENTIFIER
                     {
-                      @static_env.declare val[1][0]
+                      @static_env.declare val[2][0]
 
-                      result = [ @builder.kwrestarg(val[0], val[1]) ]
+                      result = [ @builder.kwrestarg(val[1], val[2]) ]
                     }
-                | kwrest_mark
+                | tr_argsig kwrest_mark
                     {
-                      result = [ @builder.kwrestarg(val[0]) ]
+                      result = [ @builder.kwrestarg(val[1]) ]
                     }
 
            f_opt: tr_argsig f_arg_asgn tEQL arg_value
