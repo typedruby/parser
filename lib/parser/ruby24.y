@@ -1318,7 +1318,8 @@ rule
                     }
                 | f_block_arg
                     {
-                      result = [ val[0] ]
+                      block_arg = val[0]
+                      result = block_arg ? [ block_arg ] : []
                     }
 
 opt_block_args_tail:
@@ -2022,7 +2023,8 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                     }
                 | f_block_arg
                     {
-                      result = [ val[0] ]
+                      block_arg = val[0]
+                      result = block_arg ? [ block_arg ] : []
                     }
 
    opt_args_tail: tCOMMA args_tail
@@ -2277,12 +2279,13 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                     }
                 | tr_argsig blkarg_mark
                     {
-                      result = @builder.blockarg(val[1], nil)
+                      result = nil
                     }
 
  opt_f_block_arg: tCOMMA f_block_arg
                     {
-                      result = [ val[1] ]
+                      block_arg = val[1]
+                      result = block_arg ? [block_arg] : []
                     }
                 |
                     {
