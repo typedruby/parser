@@ -2387,6 +2387,7 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
                 | tr_type
 
        tr_argsig: tr_type
+                  { @lexer.state = :expr_beg }
                 | # nothing
 
     tr_returnsig: tASSOC tr_type
