@@ -1987,9 +1987,6 @@ keyword_variable: kNIL
                       result = nil
                     }
 
-tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
-                | # nothing
-
        f_arglist: tr_methodgenargs tLPAREN2 f_args rparen
                     {
                       @lexer.state = :expr_value
@@ -2396,8 +2393,20 @@ tr_methodgenargs: tLBRACK2 tr_gendeclargs rbracket
     tr_returnsig: tASSOC tr_type
                 | # nothing
 
-  tr_gendeclargs: tr_gendeclargs tCOMMA tCONSTANT
-                | tCONSTANT
+  tr_gendeclargs: tr_gendeclargs tCOMMA tr_gendeclarg
+                | tr_gendeclarg
+
+   tr_gendeclarg: tCONSTANT
+                | tCONSTANT tCOLON tr_type
+
+tr_methodgenargs: tLBRACK2 tr_gendeclargs tr_constraints rbracket
+                | # nothing
+
+  tr_constraints: tr_constraints tSEMI tr_constraint
+                | # nothing
+
+   tr_constraint: tr_type tEQL tr_type
+                | tr_type tCOLON tr_type
 
    tr_blockproto: { @static_env.extend_dynamic }
                   block_param_def
