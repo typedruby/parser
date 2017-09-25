@@ -480,6 +480,10 @@ rule
                       result = @builder.assignable(
                                   @builder.const_fetch(val[0], val[1], val[2]))
                     }
+                | primary_value tCOLON2 tLBRACK2 tr_types rbracket
+                    {
+                      result = val[0]
+                    }
                 | tCOLON3 tCONSTANT
                     {
                       result = @builder.assignable(
