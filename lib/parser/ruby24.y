@@ -192,6 +192,10 @@ rule
                     {
                       result = @builder.multi_assign(val[0], val[1], val[2])
                     }
+                | kDEF tIVAR tCOLON tr_type
+                    {
+                      result = @builder.begin(val[0], nil, val[0])
+                    }
                 | expr
 
     command_asgn: lhs tEQL command_rhs
@@ -476,6 +480,10 @@ rule
                       result = @builder.assignable(
                                   @builder.const_fetch(val[0], val[1], val[2]))
                     }
+                | primary_value tCOLON2 tLBRACK2 tr_types rbracket
+                    {
+                      result = val[0]
+                    }
                 | tCOLON3 tCONSTANT
                     {
                       result = @builder.assignable(
@@ -538,6 +546,10 @@ rule
                 | cname
                     {
                       result = @builder.const(val[0])
+                    }
+                | primary_value tCOLON2 tLBRACK2 tr_gendeclargs rbracket
+                    {
+                      result = val[0]
                     }
                 | primary_value tCOLON2 cname
                     {
@@ -957,6 +969,10 @@ rule
                     {
                       result = @builder.begin(val[0], val[1], val[2])
                     }
+                | tLPAREN expr tCOLON tr_type tRPAREN
+                    {
+                      result = val[1]
+                    }
                 | primary_value tCOLON2 tCONSTANT
                     {
                       result = @builder.const_fetch(val[0], val[1], val[2])
@@ -1306,7 +1322,8 @@ rule
                     }
                 | f_block_arg
                     {
-                      result = [ val[0] ]
+                      block_arg = val[0]
+                      result = block_arg ? [ block_arg ] : []
                     }
 
 opt_block_args_tail:
@@ -1413,6 +1430,10 @@ opt_block_args_tail:
                 | block_param_def
                     {
                       @lexer.state = :expr_value
+                    }
+                  tr_returnsig
+                    {
+                      result = val[0]
                     }
 
  block_param_def: tPIPE opt_bv_decl tPIPE
@@ -1970,20 +1991,23 @@ keyword_variable: kNIL
                       result = nil
                     }
 
-       f_arglist: tLPAREN2 f_args rparen
+       f_arglist: tr_methodgenargs tLPAREN2 f_args rparen
                     {
-                      result = @builder.args(val[0], val[1], val[2])
-
                       @lexer.state = :expr_value
                     }
-                |   {
+                  tr_returnsig
+                    {
+                      result = @builder.args(val[1], val[2], val[3])
+                    }
+                | tr_methodgenargs
+                    {
                       result = @lexer.in_kwarg
                       @lexer.in_kwarg = true
                     }
-                  f_args term
+                  f_args tr_returnsig term
                     {
-                      @lexer.in_kwarg = val[0]
-                      result = @builder.args(nil, val[1], nil)
+                      @lexer.in_kwarg = val[1]
+                      result = @builder.args(nil, val[2], nil)
                     }
 
        args_tail: f_kwarg tCOMMA f_kwrest opt_f_block_arg
@@ -2000,7 +2024,8 @@ keyword_variable: kNIL
                     }
                 | f_block_arg
                     {
-                      result = [ val[0] ]
+                      block_arg = val[0]
+                      result = block_arg ? [ block_arg ] : []
                     }
 
    opt_args_tail: tCOMMA args_tail
@@ -2102,11 +2127,7 @@ keyword_variable: kNIL
                       result = []
                     }
 
-       f_bad_arg: tCONSTANT
-                    {
-                      diagnostic :error, :argument_const, nil, val[0]
-                    }
-                | tIVAR
+       f_bad_arg: tIVAR
                     {
                       diagnostic :error, :argument_ivar, nil, val[0]
                     }
@@ -2132,9 +2153,9 @@ keyword_variable: kNIL
                       result = val[0]
                     }
 
-      f_arg_item: f_arg_asgn
+      f_arg_item: tr_argsig f_arg_asgn
                     {
-                      result = @builder.arg(val[0])
+                      result = @builder.arg(val[1])
                     }
                 | tLPAREN f_margs rparen
                     {
@@ -2159,22 +2180,22 @@ keyword_variable: kNIL
                       result = val[0]
                     }
 
-            f_kw: f_label arg_value
+            f_kw: tr_argsig f_label arg_value
                     {
-                      result = @builder.kwoptarg(val[0], val[1])
+                      result = @builder.kwoptarg(val[1], val[2])
                     }
-                | f_label
+                | tr_argsig f_label
                     {
-                      result = @builder.kwarg(val[0])
+                      result = @builder.kwarg(val[1])
                     }
 
-      f_block_kw: f_label primary_value
+      f_block_kw: tr_argsig f_label primary_value
                     {
-                      result = @builder.kwoptarg(val[0], val[1])
+                      result = @builder.kwoptarg(val[1], val[2])
                     }
-                | f_label
+                | tr_argsig f_label
                     {
-                      result = @builder.kwarg(val[0])
+                      result = @builder.kwarg(val[1])
                     }
 
    f_block_kwarg: f_block_kw
@@ -2197,25 +2218,25 @@ keyword_variable: kNIL
 
      kwrest_mark: tPOW | tDSTAR
 
-        f_kwrest: kwrest_mark tIDENTIFIER
+        f_kwrest: tr_argsig kwrest_mark tIDENTIFIER
                     {
-                      @static_env.declare val[1][0]
+                      @static_env.declare val[2][0]
 
-                      result = [ @builder.kwrestarg(val[0], val[1]) ]
+                      result = [ @builder.kwrestarg(val[1], val[2]) ]
                     }
-                | kwrest_mark
+                | tr_argsig kwrest_mark
                     {
-                      result = [ @builder.kwrestarg(val[0]) ]
-                    }
-
-           f_opt: f_arg_asgn tEQL arg_value
-                    {
-                      result = @builder.optarg(val[0], val[1], val[2])
+                      result = [ @builder.kwrestarg(val[1]) ]
                     }
 
-     f_block_opt: f_arg_asgn tEQL primary_value
+           f_opt: tr_argsig f_arg_asgn tEQL arg_value
                     {
-                      result = @builder.optarg(val[0], val[1], val[2])
+                      result = @builder.optarg(val[1], val[2], val[3])
+                    }
+
+     f_block_opt: tr_argsig f_arg_asgn tEQL primary_value
+                    {
+                      result = @builder.optarg(val[1], val[2], val[3])
                     }
 
   f_block_optarg: f_block_opt
@@ -2238,29 +2259,34 @@ keyword_variable: kNIL
 
     restarg_mark: tSTAR2 | tSTAR
 
-      f_rest_arg: restarg_mark tIDENTIFIER
+      f_rest_arg: tr_argsig restarg_mark tIDENTIFIER
                     {
-                      @static_env.declare val[1][0]
+                      @static_env.declare val[2][0]
 
-                      result = [ @builder.restarg(val[0], val[1]) ]
+                      result = [ @builder.restarg(val[1], val[2]) ]
                     }
-                | restarg_mark
+                | tr_argsig restarg_mark
                     {
-                      result = [ @builder.restarg(val[0]) ]
+                      result = [ @builder.restarg(val[1]) ]
                     }
 
      blkarg_mark: tAMPER2 | tAMPER
 
-     f_block_arg: blkarg_mark tIDENTIFIER
+     f_block_arg: tr_argsig blkarg_mark tIDENTIFIER
                     {
-                      @static_env.declare val[1][0]
+                      @static_env.declare val[2][0]
 
-                      result = @builder.blockarg(val[0], val[1])
+                      result = @builder.blockarg(val[1], val[2])
+                    }
+                | tr_argsig blkarg_mark
+                    {
+                      result = nil
                     }
 
  opt_f_block_arg: tCOMMA f_block_arg
                     {
-                      result = [ val[1] ]
+                      block_arg = val[1]
+                      result = block_arg ? [block_arg] : []
                     }
                 |
                     {
@@ -2342,6 +2368,53 @@ keyword_variable: kNIL
                   {
                     result = nil
                   }
+
+        tr_cpath: tCOLON3 tCONSTANT
+                | tCONSTANT
+                | tr_cpath tCOLON2 tCONSTANT
+
+       tr_types: tr_types tCOMMA tr_type
+               | tr_type
+
+         tr_type: tr_cpath
+                | tr_cpath tCOLON2 tLBRACK2 tr_types rbracket
+                | tLBRACK tr_type rbracket
+                | tLBRACK tr_type tCOMMA tr_types rbracket
+                | tLBRACE tr_type tASSOC tr_type tRCURLY
+                | tLBRACE tr_blockproto tr_returnsig tRCURLY
+                | tTILDE tr_type
+                | kNIL
+                | tSYMBOL
+                | tLPAREN tr_union_type rparen
+
+   tr_union_type: tr_union_type tPIPE tr_type
+                | tr_type
+
+       tr_argsig: tr_type
+                  { @lexer.state = :expr_beg }
+                | # nothing
+
+    tr_returnsig: tASSOC tr_type
+                | # nothing
+
+  tr_gendeclargs: tr_gendeclargs tCOMMA tr_gendeclarg
+                | tr_gendeclarg
+
+   tr_gendeclarg: tCONSTANT
+                | tCONSTANT tCOLON tr_type
+
+tr_methodgenargs: tLBRACK2 tr_gendeclargs tr_constraints rbracket
+                | # nothing
+
+  tr_constraints: tr_constraints tSEMI tr_constraint
+                | # nothing
+
+   tr_constraint: tr_type tEQL tr_type
+                | tr_type tCOLON tr_type
+
+   tr_blockproto: { @static_env.extend_dynamic }
+                  block_param_def
+                  { @static_env.unextend }
 end
 
 ---- header
