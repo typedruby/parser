@@ -2630,11 +2630,6 @@ class TestParser < Minitest::Test
 
   def test_arg_invalid
     assert_diagnoses(
-      [:error, :argument_const],
-      %q{def foo(Abc); end},
-      %q{        ~~~ location})
-
-    assert_diagnoses(
       [:error, :argument_ivar],
       %q{def foo(@abc); end},
       %q{        ~~~~ location})
