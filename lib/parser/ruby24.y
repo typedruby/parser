@@ -2155,7 +2155,9 @@ keyword_variable: kNIL
 
       f_arg_item: tr_argsig f_arg_asgn
                     {
-                      result = @builder.arg(val[1])
+                      name = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.arg(name)
                     }
                 | tLPAREN f_margs rparen
                     {
@@ -2182,20 +2184,28 @@ keyword_variable: kNIL
 
             f_kw: tr_argsig f_label arg_value
                     {
-                      result = @builder.kwoptarg(val[1], val[2])
+                      name = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.kwoptarg(name, val[2])
                     }
                 | tr_argsig f_label
                     {
-                      result = @builder.kwarg(val[1])
+                      name = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.kwarg(name)
                     }
 
       f_block_kw: tr_argsig f_label primary_value
                     {
-                      result = @builder.kwoptarg(val[1], val[2])
+                      name = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.kwoptarg(name, val[2])
                     }
                 | tr_argsig f_label
                     {
-                      result = @builder.kwarg(val[1])
+                      name = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.kwarg(name)
                     }
 
    f_block_kwarg: f_block_kw
@@ -2222,21 +2232,29 @@ keyword_variable: kNIL
                     {
                       @static_env.declare val[2][0]
 
-                      result = [ @builder.kwrestarg(val[1], val[2]) ]
+                      mark = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = [ @builder.kwrestarg(mark, val[2]) ]
                     }
                 | tr_argsig kwrest_mark
                     {
-                      result = [ @builder.kwrestarg(val[1]) ]
+                      mark = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = [ @builder.kwrestarg(mark) ]
                     }
 
            f_opt: tr_argsig f_arg_asgn tEQL arg_value
                     {
-                      result = @builder.optarg(val[1], val[2], val[3])
+                      name = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.optarg(name, val[2], val[3])
                     }
 
      f_block_opt: tr_argsig f_arg_asgn tEQL primary_value
                     {
-                      result = @builder.optarg(val[1], val[2], val[3])
+                      name = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.optarg(name, val[2], val[3])
                     }
 
   f_block_optarg: f_block_opt
@@ -2263,11 +2281,15 @@ keyword_variable: kNIL
                     {
                       @static_env.declare val[2][0]
 
-                      result = [ @builder.restarg(val[1], val[2]) ]
+                      mark = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = [ @builder.restarg(mark, val[2]) ]
                     }
                 | tr_argsig restarg_mark
                     {
-                      result = [ @builder.restarg(val[1]) ]
+                      mark = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = [ @builder.restarg(mark) ]
                     }
 
      blkarg_mark: tAMPER2 | tAMPER
@@ -2276,7 +2298,9 @@ keyword_variable: kNIL
                     {
                       @static_env.declare val[2][0]
 
-                      result = @builder.blockarg(val[1], val[2])
+                      mark = @builder.combine_argsig_loc(val[0], val[1])
+
+                      result = @builder.blockarg(mark, val[2])
                     }
                 | tr_argsig blkarg_mark
                     {
@@ -2370,28 +2394,76 @@ keyword_variable: kNIL
                   }
 
         tr_cpath: tCOLON3 tCONSTANT
+                  {
+                    result = val[0][1].join(val[1][1])
+                  }
                 | tCONSTANT
+                  {
+                    result = val[0][1]
+                  }
                 | tr_cpath tCOLON2 tCONSTANT
+                  {
+                    result = val[0].join(val[2][1])
+                  }
 
        tr_types: tr_types tCOMMA tr_type
                | tr_type
 
          tr_type: tr_cpath
+                  {
+                    result = val[0]
+                  }
                 | tr_cpath tCOLON2 tLBRACK2 tr_types rbracket
+                  {
+                    result = val[0].join(val[4][1])
+                  }
                 | tLBRACK tr_type rbracket
+                  {
+                    result = val[0][1].join(val[2][1])
+                  }
                 | tLBRACK tr_type tCOMMA tr_types rbracket
+                  {
+                    result = val[0][1].join(val[4][1])
+                  }
                 | tLBRACE tr_type tASSOC tr_type tRCURLY
+                  {
+                    result = val[0][1].join(val[4][1])
+                  }
                 | tLBRACE tr_blockproto tr_returnsig tRCURLY
+                  {
+                    result = val[0][1].join(val[3][1])
+                  }
                 | tTILDE tr_type
+                  {
+                    result = val[0][1].join(val[1])
+                  }
                 | kNIL
+                  {
+                    result = val[0][1]
+                  }
                 | tSYMBOL
+                  {
+                    result = val[0][1]
+                  }
                 | tLPAREN tr_union_type rparen
+                  {
+                    result = val[0][1].join(val[2][1])
+                  }
 
    tr_union_type: tr_union_type tPIPE tr_type
+                  {
+                    result = val[0].join(val[2])
+                  }
                 | tr_type
+                  {
+                    result = val[0]
+                  }
 
        tr_argsig: tr_type
-                  { @lexer.state = :expr_beg }
+                  {
+                    @lexer.state = :expr_beg
+                    result = val[0]
+                  }
                 | # nothing
 
     tr_returnsig: tASSOC tr_type

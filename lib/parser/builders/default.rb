@@ -598,6 +598,14 @@ module Parser
     # Formal arguments
     #
 
+    def combine_argsig_loc(argsig_loc, arg)
+      if argsig_loc
+        [arg[0], argsig_loc.join(arg[1])]
+      else
+        arg
+      end
+    end
+
     def args(begin_t, args, end_t, check_args=true)
       args = check_duplicate_args(args) if check_args
       n(:args, args,
