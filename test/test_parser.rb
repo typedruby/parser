@@ -2863,7 +2863,7 @@ class TestParser < Minitest::Test
       %q{fun(1, bar: 2, 3, nil)},
       %q{            ~~~~~~~~~ expression (hash.pair.objc_varargs)},
       %w(mac))
-    end
+  end
 
   # To receiver
 
@@ -4277,6 +4277,28 @@ class TestParser < Minitest::Test
       %w(1.8 1.9 2.0 2.1 2.2 2.3 ios mac))
   end
 
+  def test_not_masgn
+    assert_diagnoses(
+      [:error, :masgn_as_condition],
+      %q{!(a, b = foo)},
+      %q{  ~~~~~~~~~~  location},
+      %w(1.8 1.9 2.0 2.1 2.2 2.3 ios mac))
+  end
+
+  def test_not_masgn__24
+    assert_parses(
+      s(:send,
+        s(:begin,
+          s(:masgn,
+            s(:mlhs,
+              s(:lvasgn, :a),
+              s(:lvasgn, :b)),
+          s(:lvar, :foo))), :'!'),
+      %q{!(a, b = foo)},
+      %q{},
+      SINCE_2_4)
+  end
+
   def test_cond_begin
     assert_parses(
       s(:if,
@@ -4333,6 +4355,20 @@ class TestParser < Minitest::Test
       %q{if foo..bar; end},
       %q{   ~~~~~~~~ expression (iflipflop)
         |      ~~ operator (iflipflop)})
+
+    assert_parses(
+      s(:not, s(:begin, s(:iflipflop, s(:lvar, :foo), s(:lvar, :bar)))),
+      %q{!(foo..bar)},
+      %q{  ~~~~~~~~ expression (begin.iflipflop)
+        |     ~~ operator (begin.iflipflop)},
+      %w(1.8))
+
+    assert_parses(
+      s(:send, s(:begin, s(:iflipflop, s(:lvar, :foo), s(:lvar, :bar))), :'!'),
+      %q{!(foo..bar)},
+      %q{  ~~~~~~~~ expression (begin.iflipflop)
+        |     ~~ operator (begin.iflipflop)},
+      SINCE_1_9)
   end
 
   def test_cond_eflipflop
@@ -4342,6 +4378,20 @@ class TestParser < Minitest::Test
       %q{if foo...bar; end},
       %q{   ~~~~~~~~~ expression (eflipflop)
         |      ~~~ operator (eflipflop)})
+
+    assert_parses(
+      s(:not, s(:begin, s(:eflipflop, s(:lvar, :foo), s(:lvar, :bar)))),
+      %q{!(foo...bar)},
+      %q{  ~~~~~~~~~ expression (begin.eflipflop)
+        |     ~~~ operator (begin.eflipflop)},
+      %w(1.8))
+
+    assert_parses(
+      s(:send, s(:begin, s(:eflipflop, s(:lvar, :foo), s(:lvar, :bar))), :'!'),
+      %q{!(foo...bar)},
+      %q{  ~~~~~~~~~ expression (begin.eflipflop)
+        |     ~~~ operator (begin.eflipflop)},
+      SINCE_1_9)
   end
 
   def test_cond_match_current_line
@@ -4354,6 +4404,27 @@ class TestParser < Minitest::Test
         nil, nil),
       %q{if /wat/; end},
       %q{   ~~~~~ expression (match_current_line)})
+
+    assert_parses(
+      s(:not,
+        s(:match_current_line,
+          s(:regexp,
+            s(:str, 'wat'),
+            s(:regopt)))),
+      %q{!/wat/},
+      %q{ ~~~~~ expression (match_current_line)},
+      %w(1.8))
+
+    assert_parses(
+      s(:send,
+        s(:match_current_line,
+          s(:regexp,
+            s(:str, 'wat'),
+            s(:regopt))),
+        :'!'),
+      %q{!/wat/},
+      %q{ ~~~~~ expression (match_current_line)},
+      SINCE_1_9)
   end
 
   # Case matching

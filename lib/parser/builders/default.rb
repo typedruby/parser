@@ -886,7 +886,7 @@ module Parser
 
     def not_op(not_t, begin_t=nil, receiver=nil, end_t=nil)
       if @parser.version == 18
-        n(:not, [ receiver ],
+        n(:not, [ check_condition(receiver) ],
           unary_op_map(not_t, receiver))
       else
         if receiver.nil?
@@ -896,7 +896,7 @@ module Parser
             nil_node, :'!'
           ], send_unary_op_map(not_t, nil_node))
         else
-          n(:send, [ receiver, :'!' ],
+          n(:send, [ check_condition(receiver), :'!' ],
             send_map(nil, nil, not_t, begin_t, [receiver], end_t))
         end
       end
